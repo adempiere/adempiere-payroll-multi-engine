@@ -18,7 +18,7 @@
 package org.spin.eca59.concept;
 
 import org.spin.eca59.employee.Employee;
-import org.spin.eca59.process.PayrollProcess;
+import org.spin.eca59.payroll_process.PayrollProcess;
 
 /**
  * 	Contract for rule engine

@@ -17,20 +17,37 @@
  *****************************************************************************/
 package org.spin.eca59.engine;
 
+import org.eevolution.hr.model.MHRProcess;
+
 /**
  * 	Contract for Engine Implementation
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public interface EngineInterface {
+public class AbstractImplementation {
+	
+	private MHRProcess process;
+	
+	public AbstractImplementation(MHRProcess process) {
+		this.process = process;
+	}
+	
 	/**
 	 * Just validate if all is ready for start
 	 * @return
 	 */
-	public boolean validate();
+	public boolean validate() {
+		return process != null;
+	}
 	
 	/**
 	 * Run payroll concepts
 	 * @return
 	 */
-	public boolean run();
+	public boolean run() {
+		return false;
+	}
+
+	public MHRProcess getProcess() {
+		return process;
+	}
 }

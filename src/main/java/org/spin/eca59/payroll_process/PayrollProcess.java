@@ -15,7 +15,7 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.process;
+package org.spin.eca59.payroll_process;
 
 import java.sql.Timestamp;
 
