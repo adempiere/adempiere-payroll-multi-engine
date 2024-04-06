@@ -15,14 +15,22 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.template.util;
+package org.spin.eca59.engine;
 
 /**
- * Add here all changes for core and statci methods
- * Please rename this class and package
- * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
+ * 	Contract for Engine Implementation
+ *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class Changes {
-	/**	Colum added to core	*/
-	public static final String COLUMNNAME_ColumAddedToCore = "ColumAddedToCore";
+public interface EngineInterface {
+	/**
+	 * Just validate if all is ready for start
+	 * @return
+	 */
+	public boolean validate();
+	
+	/**
+	 * Run payroll concepts
+	 * @return
+	 */
+	public boolean run();
 }

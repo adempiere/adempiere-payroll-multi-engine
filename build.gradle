@@ -28,6 +28,7 @@ dependencies {
     )
     //	ADempiere Core
     api "${baseGroupId}:base:${baseVersion}"
+    api "${baseGroupId}:human-resource-and-payroll:${baseVersion}"
 }
 
 sourceSets {
@@ -73,12 +74,12 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
 			groupId = group
-			artifactId = 'adempiere-template-project'
+			artifactId = 'adempiere-payroll-multi-engine'
 			version = version
            	from components.java
            	pom {
-                name = 'ADempiere Template Project'
-                description = 'Fill it with project description'
+                name = 'ADempiere Payroll Multi Engine support'
+                description = 'A project that allows extend the payroll process to implement many engines'
                 url = 'http://adempiere.io/'
                 licenses {
                     license {
@@ -94,9 +95,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com/adempiere/adempiere-template-project.git'
-                    developerConnection = 'scm:git:ssh://github.com/adempiere/adempiere-template-project.git'
-                    url = 'http://github.com/adempiere/adempiere-template-project'
+                    connection = 'scm:git:git://github.com/adempiere/adempiere-payroll-multi-engine.git'
+                    developerConnection = 'scm:git:ssh://github.com/adempiere/adempiere-payroll-multi-engine.git'
+                    url = 'http://github.com/adempiere/adempiere-payroll-multi-engine'
                 }
             }
 		}
