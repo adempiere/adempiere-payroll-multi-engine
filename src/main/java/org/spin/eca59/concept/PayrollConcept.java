@@ -24,7 +24,7 @@ import org.eevolution.hr.model.MHRConcept;
  * 	Concept Definition
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class Concept {
+public class PayrollConcept {
 	private int id;
 	private String conceptValue;
 	private String name;
@@ -39,11 +39,11 @@ public class Concept {
 	private int categoryId;
 	private int typeId;
 	
-	public static Concept newInstance(MHRConcept sourceConcept) {
-		return new Concept(sourceConcept);
+	public static PayrollConcept newInstance(MHRConcept sourceConcept) {
+		return new PayrollConcept(sourceConcept);
 	}
 	
-	private Concept(MHRConcept concept) {
+	private PayrollConcept(MHRConcept concept) {
 		if(concept == null) {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}

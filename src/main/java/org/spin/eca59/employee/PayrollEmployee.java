@@ -30,7 +30,7 @@ import org.eevolution.hr.model.MHRPayroll;
  * 	Employee Definition
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class Employee {
+public class PayrollEmployee {
 	private int id;
 	private int businessPartnerId;
 	private String value;
@@ -48,11 +48,11 @@ public class Employee {
 	private int jobId;
 	private int contractId;
 	
-	public static Employee newInstance(MHREmployee sourceEmployee) {
-		return new Employee(sourceEmployee);
+	public static PayrollEmployee newInstance(MHREmployee sourceEmployee) {
+		return new PayrollEmployee(sourceEmployee);
 	}
 	
-	private Employee(MHREmployee employee) {
+	private PayrollEmployee(MHREmployee employee) {
 		if(employee == null) {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}

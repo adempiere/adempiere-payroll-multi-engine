@@ -40,6 +40,7 @@ public class PayrollProcess {
 	private int jobId;
 	private String documentNo;
 	private String name;
+	private int periodNo;
 	
 	public static PayrollProcess newInstance(MHRProcess sourceProcess) {
 		return new PayrollProcess(sourceProcess);
@@ -66,6 +67,7 @@ public class PayrollProcess {
 				payrollPeriod.setEndDate(process.getDateAcct());
 			}
 		}
+		periodNo = payrollPeriod.getPeriodNo();
 		//	
 		validFrom = payrollPeriod.getStartDate();
 		validTo = payrollPeriod.getEndDate();
@@ -119,5 +121,9 @@ public class PayrollProcess {
 
 	public String getName() {
 		return name;
+	}
+
+	public int getPeriodNo() {
+		return periodNo;
 	}
 }

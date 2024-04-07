@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.eevolution.hr.model.MHRAttribute;
 import org.eevolution.hr.model.MHRConcept;
@@ -70,7 +72,7 @@ import org.spin.hr.util.TNAUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class DefaultImplementation extends AbstractImplementation {
+public class ParallelImplementation extends AbstractImplementation {
 	public int partnerId = 0;
 	public int userId = 0;
 	public int payrollConceptId = 0;
@@ -96,7 +98,7 @@ public class DefaultImplementation extends AbstractImplementation {
 	private Map<String, MHRAttribute> attributeInstanceMap = new HashMap<String, MHRAttribute>();
 
 	/**	Static Logger	*/
-	private static CLogger logger = CLogger.getCLogger (DefaultImplementation.class);
+	private static CLogger logger = CLogger.getCLogger (ParallelImplementation.class);
 	public static final String CONCEPT_PP_COST_COLLECTOR_LABOR = "PP_COST_COLLECTOR_LABOR"; // HARDCODED
 	private Object description = null;
 	//	Action Scope
@@ -123,14 +125,14 @@ public class DefaultImplementation extends AbstractImplementation {
 		s_scriptImport.append(" import ").append(packageName).append(";");
 	}
 	
-	public DefaultImplementation(MHRProcess process) {
+	public ParallelImplementation(MHRProcess process) {
 		super(process);
 	}
 	
 	@Override
 	public boolean run() {
 		try {
-			createMovements();
+			createParallelMovements();
 		} catch (Exception exception) {
 			deleteMovements();
 			throw new AdempiereException(exception);
@@ -184,6 +186,86 @@ public class DefaultImplementation extends AbstractImplementation {
 	
 	public Properties getCtx() {
 		return getProcess().getCtx();
+	}
+	
+	private void createParallelMovements() {
+		deleteMovements();
+		logger.info("createParallelMovements #");
+		long startTime = System.currentTimeMillis();
+		//	
+		MHRPeriod payrollPeriod;
+		
+		if (getHR_Period_ID() > 0) {
+			payrollPeriod = MHRPeriod.getById(getCtx(),  getHR_Period_ID(), get_TrxName());
+		} else {
+			payrollPeriod = new MHRPeriod(getCtx() , 0 , get_TrxName());
+			MPeriod period = MPeriod.get(getCtx(),  getDateAcct() , getAD_Org_ID(), get_TrxName());	
+			if(period != null) {
+				payrollPeriod.setStartDate(period.getStartDate());
+				payrollPeriod.setEndDate(period.getEndDate());
+			} else {
+				payrollPeriod.setStartDate(getDateAcct());
+				payrollPeriod.setEndDate(getDateAcct());
+			}
+		}
+		MHRPayroll payroll = MHRPayroll.getById(getCtx(), getHR_Payroll_ID(), get_TrxName());
+		payrollConcepts = MHRPayrollConcept.getPayrollConcepts(getProcess());
+		List<MBPartner> employees = Arrays.asList(MHREmployee.getEmployees(getProcess()));
+		employees.parallelStream().forEach(employee -> {
+			Trx.run(transactionName -> {
+				ParallelImplementation parallelProcess = new ParallelImplementation(getProcess());
+				parallelProcess.calculateMovementForParallelEmployee(payroll, payrollPeriod, payrollConcepts, employee);
+			});
+		});
+		// Save period & finish
+		if (getHR_Period_ID() > 0) {
+			payrollPeriod.setProcessed(true);
+			payrollPeriod.saveEx();
+		}
+		logger.info("Calculation for createParallelMovements # Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
+		System.err.println("Calculation for createParallelMovements # Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
+	}
+	
+	private void calculateMovementForParallelEmployee(MHRPayroll payroll, MHRPeriod payrollPeriod, MHRPayrollConcept[] payrollConcepts, MBPartner employee) {
+		scriptCtx.clear();
+		lastConceptMap = new HashMap<String, MHRMovement>();
+		conceptAgregateMap = new HashMap<String, BigDecimal>();
+		attributeInstanceMap = new HashMap<String, MHRAttribute>();
+		//	
+		logger.info("info data - Process " + getHR_Process_ID() + ", Period :" + getHR_Period_ID() + ", Payroll : " + getHR_Payroll_ID() + ", @HR_Department_ID@ : " + getHR_Department_ID());
+		dateFrom = payrollPeriod.getStartDate();
+		dateTo   = payrollPeriod.getEndDate();
+		//	Put variables
+		scriptCtx.put("process", this);
+		scriptCtx.put("_Process", getHR_Process_ID());
+		scriptCtx.put("_Period", getHR_Period_ID());
+		scriptCtx.put("_Payroll", getHR_Payroll_ID());
+		scriptCtx.put("_Department", getHR_Department_ID());
+		scriptCtx.put("_From", dateFrom);
+		scriptCtx.put("_To", dateTo);
+		scriptCtx.put("_Period", payrollPeriod.getPeriodNo());
+		scriptCtx.put("_PeriodNo", payrollPeriod.getPeriodNo());
+		scriptCtx.put("_HR_Period_ID", getHR_Period_ID());
+		scriptCtx.put("_HR_Payroll_Value", payroll.getValue());
+		//	Scope
+		scriptCtx.put("SCOPE_PROCESS", HRProcessActionMsg.SCOPE_PROCESS);
+		scriptCtx.put("SCOPE_EMPLOYEE", HRProcessActionMsg.SCOPE_EMPLOYEE);
+		scriptCtx.put("SCOPE_CONCEPT", HRProcessActionMsg.SCOPE_CONCEPT);
+		scriptCtx.put("PERSISTENCE_SAVE", HRProcessActionMsg.PERSISTENCE_SAVE);
+		scriptCtx.put("PERSISTENCE_IGNORE", HRProcessActionMsg.PERSISTENCE_IGNORE);
+		scriptCtx.put("ACTION_BREAK", HRProcessActionMsg.ACTION_BREAK);
+		//	
+		if(getHR_Payroll_ID() > 0)
+			payrollId = getHR_Payroll_ID();
+		if(getHR_Department_ID() > 0)
+			departmentId = getHR_Department_ID();
+		if(getHR_Job_ID() > 0)
+			jobId = getHR_Job_ID();
+
+		//	Instance Scope
+		actionScope = new HRProcessActionMsg();
+		this.payrollConcepts = payrollConcepts;
+		calculateMovements(employee, payrollPeriod);
 	}
 	
 	/**
@@ -492,96 +574,6 @@ public class DefaultImplementation extends AbstractImplementation {
 			throw new AdempiereException(); //TODO ?? is necessary
 		}
 
-	}
-	
-	/**
-	 * create Movements for corresponding process , period
-	 */
-	private void createMovements() throws Exception
-	{
-		logger.info("CreateMovements #");
-		long startTime = System.currentTimeMillis();
-		scriptCtx.clear();
-		lastConceptMap = new HashMap<String, MHRMovement>();
-		conceptAgregateMap = new HashMap<String, BigDecimal>();
-		attributeInstanceMap = new HashMap<String, MHRAttribute>();
-		//	
-		logger.info("info data - Process " + getHR_Process_ID() + ", Period :" + getHR_Period_ID() + ", Payroll : " + getHR_Payroll_ID() + ", @HR_Department_ID@ : " + getHR_Department_ID());
-		
-		MHRPeriod payrollPeriod;
-		
-		if (getHR_Period_ID() > 0)
-		{
-			payrollPeriod = MHRPeriod.getById(getCtx(),  getHR_Period_ID(), get_TrxName());
-		}
-		else
-		{
-			payrollPeriod = new MHRPeriod(getCtx() , 0 , get_TrxName());
-			MPeriod period = MPeriod.get(getCtx(),  getDateAcct() , getAD_Org_ID(), get_TrxName());	
-			if(period != null)
-			{
-				payrollPeriod.setStartDate(period.getStartDate());
-				payrollPeriod.setEndDate(period.getEndDate());
-			}
-			else
-			{
-				payrollPeriod.setStartDate(getDateAcct());
-				payrollPeriod.setEndDate(getDateAcct());
-			}
-		}
-
-		dateFrom = payrollPeriod.getStartDate();
-		dateTo   = payrollPeriod.getEndDate();
-		payroll = MHRPayroll.getById(getCtx(), getHR_Payroll_ID(), get_TrxName());
-		//	Put variables
-		scriptCtx.put("process", getProcess());
-		scriptCtx.put("_Process", getHR_Process_ID());
-		scriptCtx.put("_Period", getHR_Period_ID());
-		scriptCtx.put("_Payroll", getHR_Payroll_ID());
-		scriptCtx.put("_Department", getHR_Department_ID());
-		scriptCtx.put("_From", dateFrom);
-		scriptCtx.put("_To", dateTo);
-		scriptCtx.put("_Period", payrollPeriod.getPeriodNo());
-		scriptCtx.put("_PeriodNo", payrollPeriod.getPeriodNo());
-		scriptCtx.put("_HR_Period_ID", getHR_Period_ID());
-		scriptCtx.put("_HR_Payroll_Value", payroll.getValue());
-		//	Scope
-		scriptCtx.put("SCOPE_PROCESS", HRProcessActionMsg.SCOPE_PROCESS);
-		scriptCtx.put("SCOPE_EMPLOYEE", HRProcessActionMsg.SCOPE_EMPLOYEE);
-		scriptCtx.put("SCOPE_CONCEPT", HRProcessActionMsg.SCOPE_CONCEPT);
-		scriptCtx.put("PERSISTENCE_SAVE", HRProcessActionMsg.PERSISTENCE_SAVE);
-		scriptCtx.put("PERSISTENCE_IGNORE", HRProcessActionMsg.PERSISTENCE_IGNORE);
-		scriptCtx.put("ACTION_BREAK", HRProcessActionMsg.ACTION_BREAK);
-		//	
-		if(getHR_Payroll_ID() > 0)
-			payrollId = getHR_Payroll_ID();
-		if(getHR_Department_ID() > 0)
-			departmentId = getHR_Department_ID();
-		if(getHR_Job_ID() > 0)
-			jobId = getHR_Job_ID();
-
-		payrollConcepts = MHRPayrollConcept.getPayrollConcepts(getProcess());
-		//	Instance Scope
-		actionScope = new HRProcessActionMsg();
-		//	
-		for(MBPartner employee : MHREmployee.getEmployees(getProcess())) {
-			calculateMovements(employee, payrollPeriod);
-			//	Validate action
-			if(actionScope.isProcessScope()
-					&& actionScope.isBreakRunning()) {
-				actionScope.clearAction();
-				actionScope.clearScope();
-				actionScope.clearPersistence();
-				break;
-			}
-		}
-
-		// Save period & finish
-		if (getHR_Period_ID() > 0) {
-			payrollPeriod.setProcessed(true);
-			payrollPeriod.saveEx();
-		}
-		logger.info("Calculation for CreateMovements # Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
 	}
 
 	/**

@@ -17,7 +17,7 @@
  *****************************************************************************/
 package org.spin.eca59.concept;
 
-import org.spin.eca59.employee.Employee;
+import org.spin.eca59.employee.PayrollEmployee;
 import org.spin.eca59.payroll_process.PayrollProcess;
 
 /**
@@ -25,5 +25,5 @@ import org.spin.eca59.payroll_process.PayrollProcess;
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
 public interface RuleRunner {
-	public RuleResult run(PayrollProcess process, Employee employee, Concept concept, String transactionName);
+	public RuleResult run(PayrollProcess process, PayrollEmployee employee, PayrollConcept concept, String transactionName);
 }
