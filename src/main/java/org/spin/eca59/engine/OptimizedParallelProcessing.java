@@ -71,7 +71,7 @@ import org.spin.util.RuleEngineUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class OptimizedParallelProcessing implements Engine {
+public class OptimizedParallelProcessing implements PayrollEngine {
 
 	/**	Static Logger	*/
 	private static CLogger logger = CLogger.getCLogger (OptimizedParallelProcessing.class);
@@ -91,8 +91,7 @@ public class OptimizedParallelProcessing implements Engine {
 		return process;
 	}
 
-	@Override
-	public void setProcesss(MHRProcess process) {
+	public OptimizedParallelProcessing(MHRProcess process) {
 		this.process = process;
 	}
 	

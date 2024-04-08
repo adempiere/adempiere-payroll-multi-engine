@@ -72,7 +72,7 @@ import org.spin.hr.util.TNAUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class ParallelImplementation implements Engine {
+public class ParallelImplementation implements PayrollEngine {
 	public int partnerId = 0;
 	public int userId = 0;
 	public int payrollConceptId = 0;
@@ -131,9 +131,8 @@ public class ParallelImplementation implements Engine {
 	public MHRProcess getProcess() {
 		return process;
 	}
-
-	@Override
-	public void setProcesss(MHRProcess process) {
+	
+	public ParallelImplementation(MHRProcess process) {
 		this.process = process;
 	}
 
@@ -226,8 +225,7 @@ public class ParallelImplementation implements Engine {
 		List<MBPartner> employees = Arrays.asList(MHREmployee.getEmployees(getProcess()));
 		employees.parallelStream().forEach(employee -> {
 			Trx.run(transactionName -> {
-				ParallelImplementation parallelProcess = new ParallelImplementation();
-				parallelProcess.setProcesss(process);
+				ParallelImplementation parallelProcess = new ParallelImplementation(process);
 				parallelProcess.calculateMovementForParallelEmployee(payroll, payrollPeriod, payrollConcepts, employee);
 			});
 		});

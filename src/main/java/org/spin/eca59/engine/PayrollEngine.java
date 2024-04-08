@@ -23,7 +23,7 @@ import org.eevolution.hr.model.MHRProcess;
  * 	Contract for Engine Implementation
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public interface Engine {
+public interface PayrollEngine {
 	
 	/**
 	 * Just validate if all is ready for start
@@ -42,10 +42,4 @@ public interface Engine {
 	 * @return
 	 */
 	public MHRProcess getProcess();
-	
-	/**
-	 * Set Payroll Process
-	 * @param process
-	 */
-	public void setProcesss(MHRProcess process);
 }

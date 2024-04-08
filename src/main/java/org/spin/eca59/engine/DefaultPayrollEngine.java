@@ -70,7 +70,7 @@ import org.spin.hr.util.TNAUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class DefaultImplementation implements Engine {
+public class DefaultPayrollEngine implements PayrollEngine {
 	public MHRProcess process;
 	public int partnerId = 0;
 	public int userId = 0;
@@ -97,7 +97,7 @@ public class DefaultImplementation implements Engine {
 	private Map<String, MHRAttribute> attributeInstanceMap = new HashMap<String, MHRAttribute>();
 
 	/**	Static Logger	*/
-	private static CLogger logger = CLogger.getCLogger (DefaultImplementation.class);
+	private static CLogger logger = CLogger.getCLogger (DefaultPayrollEngine.class);
 	public static final String CONCEPT_PP_COST_COLLECTOR_LABOR = "PP_COST_COLLECTOR_LABOR"; // HARDCODED
 	private Object description = null;
 	//	Action Scope
@@ -122,6 +122,10 @@ public class DefaultImplementation implements Engine {
 	public static void addScriptImportPackage(String packageName)
 	{
 		s_scriptImport.append(" import ").append(packageName).append(";");
+	}
+	
+	public DefaultPayrollEngine(MHRProcess process) {
+		this.process = process;
 	}
 	
 	@Override
@@ -2266,10 +2270,5 @@ public class DefaultImplementation implements Engine {
 	@Override
 	public MHRProcess getProcess() {
 		return process;
-	}
-
-	@Override
-	public void setProcesss(MHRProcess process) {
-		this.process = process;
 	}
 }

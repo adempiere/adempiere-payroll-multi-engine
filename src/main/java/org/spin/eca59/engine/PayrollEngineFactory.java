@@ -32,38 +32,32 @@ import org.eevolution.hr.model.MHRProcess;
  * @return
  * @return Class<?>
  */
-public class EngineFactory {
+public class PayrollEngineFactory {
 	
 	/**
 	 * Payroll Engine Implementation
 	 */
 	public static final String ECA59_PAYROLL_ENGINE = "ECA59_PAYROLL_ENGINE";
 	/** Logger */
-	private static CLogger log = CLogger.getCLogger(EngineFactory.class);
+	private static CLogger log = CLogger.getCLogger(PayrollEngineFactory.class);
 	
 	/**
 	 * Get Class from implementation, used for handler
 	 * @return
 	 * @return Class<?>
 	 */
-	private Class<?> getHandlerClass(int clientId) {
-		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, EngineFactory.class.getName(), clientId);
+	private static Class<?> getHandlerClass(int clientId) {
+		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, DefaultPayrollEngine.class.getName(), clientId);
 		//	Validate null values
 		if(Util.isEmpty(className)) {
 			return null;
 		}
 		try {
 			Class<?> clazz = Class.forName(className);
-			//	Make sure that it is a PO class
-			Class<?> superClazz = clazz.getSuperclass();
-			//	Validate super class
-			while (superClazz != null) {
-				if (superClazz == Engine.class) {
-					log.fine("Use: " + className);
+			if(clazz != null) {
+				if(PayrollEngine.class.isAssignableFrom(clazz)) {
 					return clazz;
 				}
-				//	Get Super Class
-				superClazz = superClazz.getSuperclass();
 			}
 		} catch (Exception e) {
 			log.severe(e.getMessage());
@@ -77,24 +71,21 @@ public class EngineFactory {
 	 * Get Report export instance
 	 * @return
 	 */
-	public Engine getInstance(MHRProcess process) throws Exception {
+	public static PayrollEngine getInstance(MHRProcess process) throws Exception {
 		if(process == null) {
 			throw new AdempiereException("@HR_Process_ID@ @IsMandatory@");
 		}
 		//	Load it
 		//	Get class from parent
 		Class<?> clazz = getHandlerClass(process.getAD_Client_ID());
-		Engine engine = null;
+		PayrollEngine engine = null;
 		//	Not yet implemented
 		if (clazz == null) {
 			log.log(Level.INFO, "Using Default Payroll Implementation");
-			engine = new DefaultImplementation();
+			engine = new DefaultPayrollEngine(process);
 		} else {
-			Constructor<?> constructor = clazz.getDeclaredConstructor();
-			engine = (Engine) constructor.newInstance();
-		}
-		if(engine != null) {
-			engine.setProcesss(process);
+			Constructor<?> constructor = clazz.getDeclaredConstructor(new Class[] {MHRProcess.class});
+			engine = (PayrollEngine) constructor.newInstance(new Object[] {process});
 		}
 		//	new instance
 		return engine;
