@@ -26,7 +26,7 @@ import org.eevolution.hr.model.MHRConcept;
  */
 public class PayrollConcept {
 	private int id;
-	private String conceptValue;
+	private String value;
 	private String name;
 	private String description;
 	private String help;
@@ -36,8 +36,12 @@ public class PayrollConcept {
 	private boolean isManual;
 	private boolean isEmployee;
 	private boolean isInvoiced;
+	private boolean isPrinted;
 	private int categoryId;
 	private int typeId;
+	private int sequence;
+	private int precision;
+	private MHRConcept concept;
 	
 	public static PayrollConcept newInstance(MHRConcept sourceConcept) {
 		return new PayrollConcept(sourceConcept);
@@ -47,6 +51,7 @@ public class PayrollConcept {
 		if(concept == null) {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}
+		this.concept = concept;
 		id = concept.getHR_Concept_ID();
 		name = concept.getName();
 		description = concept.getDescription();
@@ -57,16 +62,19 @@ public class PayrollConcept {
 		isManual = concept.isManual();
 		isEmployee = concept.isEmployee();
 		isInvoiced = concept.isInvoiced();
+		isPrinted = concept.isPrinted();
 		categoryId = concept.getHR_Concept_Category_ID();
 		typeId = concept.getHR_Concept_Type_ID();
+		sequence = concept.getSeqNo();
+		precision = concept.getStdPrecision();
 	}
 
 	public int getId() {
 		return id;
 	}
 
-	public String getConceptValue() {
-		return conceptValue;
+	public String getValue() {
+		return value;
 	}
 
 	public String getName() {
@@ -111,5 +119,21 @@ public class PayrollConcept {
 
 	public int getTypeId() {
 		return typeId;
+	}
+
+	public boolean isPrinted() {
+		return isPrinted;
+	}
+
+	public int getSequence() {
+		return sequence;
+	}
+
+	public MHRConcept getConcept() {
+		return concept;
+	}
+
+	public int getPrecision() {
+		return precision;
 	}
 }

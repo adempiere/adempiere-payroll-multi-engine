@@ -15,50 +15,37 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.engine;
+package org.spin.eca59.concept;
 
 import java.lang.reflect.Constructor;
-import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
-import org.compiere.model.MSysConfig;
+import org.compiere.model.MRule;
 import org.compiere.util.CLogger;
-import org.compiere.util.Util;
-import org.eevolution.hr.model.MHRProcess;
+import org.spin.util.RuleEngineUtil;
 
 /**
- * Get Class from payroll engine, used for handler
+ * Get Class from rule
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  * @return
  * @return Class<?>
  */
-public class EngineFactory {
+public class RuleRunnerFactory {
 	
-	/**
-	 * Payroll Engine Implementation
-	 */
-	public static final String ECA59_PAYROLL_ENGINE = "ECA59_PAYROLL_ENGINE";
 	/** Logger */
-	private static CLogger log = CLogger.getCLogger(EngineFactory.class);
+	private static CLogger log = CLogger.getCLogger(RuleRunnerFactory.class);
 	
-	/**
-	 * Get Class from implementation, used for handler
-	 * @return
-	 * @return Class<?>
-	 */
-	private Class<?> getHandlerClass(int clientId) {
-		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, EngineFactory.class.getName(), clientId);
-		//	Validate null values
-		if(Util.isEmpty(className)) {
-			return null;
-		}
+	private static Class<?> getRuleRunnerClass(String className) {
 		try {
 			Class<?> clazz = Class.forName(className);
+			if(RuleRunner.class.isAssignableFrom(clazz)) {
+                return clazz;
+            }
 			//	Make sure that it is a PO class
 			Class<?> superClazz = clazz.getSuperclass();
 			//	Validate super class
 			while (superClazz != null) {
-				if (superClazz == Engine.class) {
+				if (superClazz == RuleRunner.class) {
 					log.fine("Use: " + className);
 					return clazz;
 				}
@@ -74,29 +61,22 @@ public class EngineFactory {
 	}	//	getHandlerClass
 	
 	/**
-	 * Get Report export instance
+	 * Get Rule Runner Instance
 	 * @return
 	 */
-	public Engine getInstance(MHRProcess process) throws Exception {
-		if(process == null) {
-			throw new AdempiereException("@HR_Process_ID@ @IsMandatory@");
+	public static RuleRunner getRuleRunnerInstance(MRule rule) throws Exception {
+		if(rule == null) {
+			throw new AdempiereException("@AD_Rule_ID@ @IsMandatory@");
 		}
+		String className = RuleEngineUtil.getCompleteClassName(rule);
 		//	Load it
-		//	Get class from parent
-		Class<?> clazz = getHandlerClass(process.getAD_Client_ID());
-		Engine engine = null;
+		Class<?> clazz = getRuleRunnerClass(className);
 		//	Not yet implemented
-		if (clazz == null) {
-			log.log(Level.INFO, "Using Default Payroll Implementation");
-			engine = new DefaultImplementation();
-		} else {
+		if (clazz != null) {
 			Constructor<?> constructor = clazz.getDeclaredConstructor();
-			engine = (Engine) constructor.newInstance();
-		}
-		if(engine != null) {
-			engine.setProcesss(process);
+			return (RuleRunner) constructor.newInstance();
 		}
 		//	new instance
-		return engine;
+		return null;
 	}
 }

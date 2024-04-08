@@ -15,39 +15,37 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.engine;
-
-import org.eevolution.hr.model.MHRProcess;
+package org.spin.eca59.concept;
 
 /**
- * 	Contract for Engine Implementation
+ * 	Default Result Implementation
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class AbstractImplementation {
+public class DefaultRuleResult implements RuleResult {
 	
-	private MHRProcess process;
+	private Object result;
+	private String description;
 	
-	public AbstractImplementation(MHRProcess process) {
-		this.process = process;
+	public DefaultRuleResult(Object result, Object description) {
+		this.result = result;
+		if(description != null) {
+			this.description = (String) description;
+		}
 	}
 	
 	/**
-	 * Just validate if all is ready for start
+	 * Get description from rule
 	 * @return
 	 */
-	public boolean validate() {
-		return process != null;
+	public String getDescription() {
+		return description;
 	}
 	
 	/**
-	 * Run payroll concepts
+	 * Get result from execution
 	 * @return
 	 */
-	public boolean run() {
-		return false;
-	}
-
-	public MHRProcess getProcess() {
-		return process;
+	public Object getResult() {
+		return result;
 	}
 }

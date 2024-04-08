@@ -43,10 +43,15 @@ public class PayrollEmployee {
 	private Timestamp startDate;
 	private Timestamp endDate;
 	private int payrollId;
+	private int organizationId;
+	private int organizationTrxId;
 	private String payrollValue;
 	private int departmentId;
 	private int jobId;
 	private int contractId;
+	private int businessPartnerGroupId;
+	private MHREmployee employee;
+	private MBPartner businessPartner;
 	
 	public static PayrollEmployee newInstance(MHREmployee sourceEmployee) {
 		return new PayrollEmployee(sourceEmployee);
@@ -57,8 +62,13 @@ public class PayrollEmployee {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}
 		MBPartner businessPartner = (MBPartner) employee.getC_BPartner();
+		this.employee = employee;
+		this.businessPartner = businessPartner;
 		id = employee.getHR_Employee_ID();
 		businessPartnerId = employee.getC_BPartner_ID();
+		businessPartnerGroupId = businessPartner.getC_BP_Group_ID();
+		organizationId = employee.getAD_Org_ID();
+		organizationTrxId = employee.getAD_OrgTrx_ID();
 		value = businessPartner.getValue();
 		taxId = businessPartner.getTaxID();
 		name = Optional.ofNullable(employee.getName()).orElse(businessPartner.getName());
@@ -143,5 +153,25 @@ public class PayrollEmployee {
 
 	public int getContractId() {
 		return contractId;
+	}
+
+	public MHREmployee getEmployee() {
+		return employee;
+	}
+
+	public MBPartner getBusinessPartner() {
+		return businessPartner;
+	}
+
+	public int getBusinessPartnerGroupId() {
+		return businessPartnerGroupId;
+	}
+
+	public int getOrganizationId() {
+		return organizationId;
+	}
+
+	public int getOrganizationTrxId() {
+		return organizationTrxId;
 	}
 }

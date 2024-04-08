@@ -32,6 +32,7 @@ import org.eevolution.hr.model.MHRProcess;
 public class PayrollProcess {
 	private int id;
 	private int businessPartnerId;
+	private Timestamp dateAcct;
 	private Timestamp validFrom;
 	private Timestamp validTo;
 	private int payrollId;
@@ -41,6 +42,12 @@ public class PayrollProcess {
 	private String documentNo;
 	private String name;
 	private int periodNo;
+	private int periodId;
+	private int currencyId;
+	private int clientId;
+	private int conversionTypeId;
+	private int organizationId;
+	private MHRProcess process;
 	
 	public static PayrollProcess newInstance(MHRProcess sourceProcess) {
 		return new PayrollProcess(sourceProcess);
@@ -50,8 +57,14 @@ public class PayrollProcess {
 		if(process == null) {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}
+		this.process = process;
 		id = process.getHR_Process_ID();
 		documentNo = process.getDocumentNo();
+		currencyId = process.getC_Currency_ID();
+		conversionTypeId = process.getC_ConversionType_ID();
+		clientId = process.getAD_Client_ID();
+		organizationId = process.getAD_Org_ID();
+		dateAcct = process.getDateAcct();
 		name = process.getName();
 		MHRPeriod payrollPeriod;
 		if (process.getHR_Period_ID() > 0) {
@@ -67,6 +80,7 @@ public class PayrollProcess {
 				payrollPeriod.setEndDate(process.getDateAcct());
 			}
 		}
+		periodId = process.getHR_Period_ID();
 		periodNo = payrollPeriod.getPeriodNo();
 		//	
 		validFrom = payrollPeriod.getStartDate();
@@ -81,6 +95,10 @@ public class PayrollProcess {
 		departmentId = process.getHR_Department_ID();
 		jobId = process.getHR_Job_ID();
 		businessPartnerId = process.getC_BPartner_ID();
+	}
+	
+	public MHRProcess getProcess() {
+		return process;
 	}
 
 	public int getId() {
@@ -125,5 +143,29 @@ public class PayrollProcess {
 
 	public int getPeriodNo() {
 		return periodNo;
+	}
+
+	public int getPeriodId() {
+		return periodId;
+	}
+
+	public int getCurrencyId() {
+		return currencyId;
+	}
+
+	public int getConversionTypeId() {
+		return conversionTypeId;
+	}
+
+	public Timestamp getDateAcct() {
+		return dateAcct;
+	}
+
+	public int getOrganizationId() {
+		return organizationId;
+	}
+
+	public int getClientId() {
+		return clientId;
 	}
 }

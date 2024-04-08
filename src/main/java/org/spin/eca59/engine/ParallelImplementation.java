@@ -72,7 +72,7 @@ import org.spin.hr.util.TNAUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class ParallelImplementation extends AbstractImplementation {
+public class ParallelImplementation implements Engine {
 	public int partnerId = 0;
 	public int userId = 0;
 	public int payrollConceptId = 0;
@@ -119,14 +119,27 @@ public class ParallelImplementation extends AbstractImplementation {
 			+ Env.NL + "import java.util.*;" 
 			+ Env.NL + "import java.math.*;"
 			+ Env.NL + "import java.sql.*;");
+	
+	private MHRProcess process;
+	
+	@Override
+	public boolean validate() {
+		return true;
+	}
+
+	@Override
+	public MHRProcess getProcess() {
+		return process;
+	}
+
+	@Override
+	public void setProcesss(MHRProcess process) {
+		this.process = process;
+	}
 
 	public static void addScriptImportPackage(String packageName)
 	{
 		s_scriptImport.append(" import ").append(packageName).append(";");
-	}
-	
-	public ParallelImplementation(MHRProcess process) {
-		super(process);
 	}
 	
 	@Override
@@ -213,7 +226,8 @@ public class ParallelImplementation extends AbstractImplementation {
 		List<MBPartner> employees = Arrays.asList(MHREmployee.getEmployees(getProcess()));
 		employees.parallelStream().forEach(employee -> {
 			Trx.run(transactionName -> {
-				ParallelImplementation parallelProcess = new ParallelImplementation(getProcess());
+				ParallelImplementation parallelProcess = new ParallelImplementation();
+				parallelProcess.setProcesss(process);
 				parallelProcess.calculateMovementForParallelEmployee(payroll, payrollPeriod, payrollConcepts, employee);
 			});
 		});
@@ -2112,7 +2126,7 @@ public class ParallelImplementation extends AbstractImplementation {
 			payrollPeriod = MHRPeriod.getById(getCtx(),  getHR_Period_ID(), get_TrxName());
 		} else {
 			payrollPeriod = new MHRPeriod(getCtx() , 0 , get_TrxName());
-			MPeriod period = MPeriod.get(getCtx(),  getDateAcct() , getAD_Org_ID());
+			MPeriod period = MPeriod.get(getCtx(),  getDateAcct(), getAD_Org_ID(), get_TrxName());
 			if(period != null)
 			{
 				payrollPeriod.setStartDate(period.getStartDate());

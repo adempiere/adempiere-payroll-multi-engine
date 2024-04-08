@@ -70,7 +70,8 @@ import org.spin.hr.util.TNAUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class DefaultImplementation extends AbstractImplementation {
+public class DefaultImplementation implements Engine {
+	public MHRProcess process;
 	public int partnerId = 0;
 	public int userId = 0;
 	public int payrollConceptId = 0;
@@ -121,10 +122,6 @@ public class DefaultImplementation extends AbstractImplementation {
 	public static void addScriptImportPackage(String packageName)
 	{
 		s_scriptImport.append(" import ").append(packageName).append(";");
-	}
-	
-	public DefaultImplementation(MHRProcess process) {
-		super(process);
 	}
 	
 	@Override
@@ -2120,7 +2117,7 @@ public class DefaultImplementation extends AbstractImplementation {
 			payrollPeriod = MHRPeriod.getById(getCtx(),  getHR_Period_ID(), get_TrxName());
 		} else {
 			payrollPeriod = new MHRPeriod(getCtx() , 0 , get_TrxName());
-			MPeriod period = MPeriod.get(getCtx(),  getDateAcct() , getAD_Org_ID());
+			MPeriod period = MPeriod.get(getCtx(),  getDateAcct() , getAD_Org_ID(), get_TrxName());
 			if(period != null)
 			{
 				payrollPeriod.setStartDate(period.getStartDate());
@@ -2259,4 +2256,20 @@ public class DefaultImplementation extends AbstractImplementation {
 	public double getIncidenceSum(String conceptValue, Timestamp from, Timestamp to) {
 		return TNAUtil.getIncidenceSum(getCtx(), conceptValue, null, partnerId, from, to, get_TrxName());
 	} // getIncidence
+
+	@Override
+	public boolean validate() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public MHRProcess getProcess() {
+		return process;
+	}
+
+	@Override
+	public void setProcesss(MHRProcess process) {
+		this.process = process;
+	}
 }
