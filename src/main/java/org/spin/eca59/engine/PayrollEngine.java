@@ -25,6 +25,18 @@ import org.eevolution.hr.model.MHRProcess;
  */
 public interface PayrollEngine {
 	
+	//	For process
+	public static final int SCOPE_PROCESS = 1;
+	//	For employee
+	public static final int SCOPE_EMPLOYEE = 2;
+	//	For concept
+	public static final int SCOPE_CONCEPT = 3;
+	/**	Persistence							*/
+	//	Save
+	public static final int PERSISTENCE_SAVE = 1;
+	//	Ignore
+	public static final int PERSISTENCE_IGNORE = 2;
+	
 	/**
 	 * Just validate if all is ready for start
 	 * @return
@@ -42,4 +54,11 @@ public interface PayrollEngine {
 	 * @return
 	 */
 	public MHRProcess getProcess();
+	
+	/**
+	 * Break Running
+	 * @param scope
+	 * @param persistence
+	 */
+	public void breakRunning(int scope, int persistence);
 }

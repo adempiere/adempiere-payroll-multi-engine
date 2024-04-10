@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MBPartner;
+import org.compiere.util.TimeUtil;
 import org.eevolution.hr.model.MHRContract;
 import org.eevolution.hr.model.MHREmployee;
 import org.eevolution.hr.model.MHRPayroll;
@@ -52,6 +53,7 @@ public class PayrollEmployee {
 	private int businessPartnerGroupId;
 	private MHREmployee employee;
 	private MBPartner businessPartner;
+	private MHRContract contract;
 	
 	public static PayrollEmployee newInstance(MHREmployee sourceEmployee) {
 		return new PayrollEmployee(sourceEmployee);
@@ -77,13 +79,13 @@ public class PayrollEmployee {
 		sSCode = employee.getSSCode();
 		gender = businessPartner.getGender();
 		startDate = employee.getStartDate();
-		endDate = employee.getEndDate();
+		endDate = employee.getEndDate() == null ? TimeUtil.getDay(2999, 12, 31) : employee.getEndDate();
 		payrollId = employee.getHR_Payroll_ID();
 		if(payrollId > 0) {
 			MHRPayroll payroll = MHRPayroll.getById(employee.getCtx(), employee.getHR_Payroll_ID(), null);
 			if(payroll != null) {
 				payrollValue = payroll.getValue();
-				MHRContract contract = MHRContract.getById(employee.getCtx(), payroll.getHR_Contract_ID(), null);
+				contract = MHRContract.getById(employee.getCtx(), payroll.getHR_Contract_ID(), null);
 				contractId = contract.getHR_Contract_ID();
 			}
 		}
@@ -173,5 +175,14 @@ public class PayrollEmployee {
 
 	public int getOrganizationTrxId() {
 		return organizationTrxId;
+	}
+
+	public MHRContract getContract() {
+		return contract;
+	}
+
+	@Override
+	public String toString() {
+		return "PayrollEmployee [businessPartnerId=" + businessPartnerId + ", value=" + value + ", name=" + name + "]";
 	}
 }

@@ -33,6 +33,10 @@ public class DefaultRuleResult implements RuleResult {
 		}
 	}
 	
+	public static RuleResult fromObject(Object result) {
+		return new DefaultRuleResult(result, null);
+	}
+	
 	/**
 	 * Get description from rule
 	 * @return

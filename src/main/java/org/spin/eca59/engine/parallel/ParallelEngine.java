@@ -15,15 +15,16 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.engine;
+package org.spin.eca59.engine.parallel;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,6 +59,7 @@ import org.eevolution.hr.model.MHRProcess;
 import org.eevolution.hr.services.HRProcessActionMsg;
 import org.spin.eca59.concept.PayrollConcept;
 import org.spin.eca59.employee.PayrollEmployee;
+import org.spin.eca59.engine.PayrollEngine;
 import org.spin.eca59.payroll_process.PayrollProcess;
 import org.spin.eca59.rule.DefaultRuleResult;
 import org.spin.eca59.rule.RuleContext;
@@ -72,14 +74,14 @@ import org.spin.util.RuleEngineUtil;
  * Default payroll process implementation
  * @author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public class OptimizedParallelProcessing implements PayrollEngine {
+public class ParallelEngine implements PayrollEngine {
 
 	/**	Static Logger	*/
-	private static CLogger logger = CLogger.getCLogger (OptimizedParallelProcessing.class);
+	private static CLogger logger = CLogger.getCLogger (ParallelEngine.class);
 	/** HR_Concept_ID->MHRMovement */
-	public Hashtable<Integer, MHRMovement> movements = new Hashtable<Integer, MHRMovement>();
+	public Map<String, MHRMovement> movements = Collections.synchronizedMap(new HashMap<String, MHRMovement>());
 	/* stack of concepts executing rules - to check loop in recursion */
-	private List<PayrollConcept> activeConceptRule = new ArrayList<PayrollConcept>();
+	private Map<String, Boolean> activeConceptRule = Collections.synchronizedMap(new HashMap<String, Boolean>());
 	private MHRProcess process;
 	
 	@Override
@@ -92,8 +94,11 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		return process;
 	}
 
-	public OptimizedParallelProcessing(MHRProcess process) {
+	public ParallelEngine(MHRProcess process) {
 		this.process = process;
+	}
+	private String getMovementKey(int partnerId, int conceptId) {
+		return partnerId + "|" + conceptId;
 	}
 	
 	@Override
@@ -114,14 +119,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 					MHRPayrollConcept payrollConceptReference = new MHRPayrollConcept(getCtx(), payrollConceptId, null);
 					MHRConcept concept = MHRConcept.getById(getCtx(), payrollConceptReference.getHR_Concept_ID(), null);
 					PayrollConcept payrollConcept = PayrollConcept.newInstance(concept);
-					MHRMovement movement = movements.get(concept.get_ID()); // as it's now recursive, it can happen that the concept is already generated
-					if (movement == null) {
-						createMovementFromConcept(payrollProcess, payrollEmployee, payrollConcept, transactionName);
-						movement = movements.get(concept.get_ID());
-						movement.setHR_Payroll_ID(payrollProcess.getPayrollId());
-						movement.setHR_PayrollConcept_ID(payrollConceptReference.getHR_PayrollConcept_ID());
-						movement.setPeriodNo(payrollProcess.getPeriodNo());
-					}
+					createMovementFromConcept(payrollProcess, payrollEmployee, payrollConcept, transactionName);
 				});
 			});
 			logger.info("Employee # " + businessPartner.getValue() + " - " + businessPartner.getName() +  " " + businessPartner.getName2() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - employeeStartTime));
@@ -129,6 +127,37 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		logger.info("Calculation for createParallelMovements # Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
 		return true;
 	}
+	
+//	private void saveMovements() {
+//		long startTime = System.currentTimeMillis();
+//		movements.values()
+//		.parallelStream()
+//		.filter(movement -> movement.getHR_Concept_ID() != 0)
+//		.forEach(movement -> {
+//			long startSavingMovementTime = System.currentTimeMillis();
+//			MHRConcept concept = MHRConcept.getById(getCtx() , movement.getHR_Concept_ID(), null);
+//			if (concept != null && concept.get_ID() > 0) {
+//				if (concept.isManual()) {
+//					logger.fine("Skip saving " + movement);
+//				} else {
+//					boolean saveThisRecord = (concept.isSaveInHistoric() 
+//													|| movement.isPrinted() 
+//													|| concept.isPaid() 
+//													|| concept.isPrinted()) 
+//											&& (!concept.isNotSaveInHistoryIfNull() || !movement.isEmpty());
+//					if (saveThisRecord) {
+//						try {
+//							Trx.run(transactionName -> movement.saveEx(transactionName));
+//						} catch (Exception e) {
+//							System.err.println("Error");
+//						}
+//					}
+//				}
+//			}
+//			logger.info("Saving Concept " + concept.getValue() + " - " + concept.getName() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startSavingMovementTime));
+//		});
+//		logger.info("Saving elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
+//	}
 	
 	public Properties getCtx() {
 		return getProcess().getCtx();
@@ -143,43 +172,68 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 	 * @param isPrinted
 	 * @return
 	 */
-	private void createMovementFromConcept(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept payrollConcept, String transactionName) {
+	public MHRMovement createMovementFromConcept(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept payrollConcept, String transactionName) {
+		MHRMovement movement = movements.get(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()));
+		if(movement != null) {
+			return movement;
+		}
 		logger.info("Calculating -> Concept "+ payrollConcept.getValue() + " -> " + payrollConcept.getName());
 		//	TODO: Implement it
 		MHRAttribute attribute = MHRAttribute.getByConceptAndEmployee(payrollConcept.getConcept() , employee.getEmployee(), payrollProcess.getPayrollId(), payrollProcess.getValidFrom(), payrollProcess.getValidTo());
 		if (attribute == null || payrollConcept.isManual()) {
-			createDummyMovement(payrollConcept, transactionName);
-			return;
+			createDummyMovement(employee, payrollConcept, transactionName);
+			return null;
 		}
 
 		logger.info("Concept : " + payrollConcept.getName());
-		MHRMovement movement = createMovement(payrollProcess, payrollConcept, employee, attribute, transactionName);
-		if (MHRConcept.TYPE_RuleEngine.equals(payrollConcept.getType()))
-		{
+		movement = createMovement(payrollProcess, payrollConcept, employee, attribute, transactionName);
+		if (MHRConcept.TYPE_RuleEngine.equals(payrollConcept.getType())) {
 			logger.info("Processing -> Rule to Concept " + payrollConcept.getValue());
-			if (activeConceptRule.contains(payrollConcept)) {
+			if (activeConceptRule.containsKey(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()))) {
 				throw new AdempiereException("Recursion loop detected in concept " + payrollConcept.getValue());
 			}
-			activeConceptRule.add(payrollConcept);
+			activeConceptRule.put(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()), true);
 			RuleResult result = executeScript(payrollProcess, employee, payrollConcept, attribute.getAD_Rule_ID(), transactionName);
-			activeConceptRule.remove(payrollConcept);
-			movement.setColumnValue(result.getResult()); // double rounded in MHRMovement.setColumnValue
-			if (result.getDescription() != null) {
-				movement.setDescription(result.getDescription());
+			activeConceptRule.remove(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()));
+			if(result != null) {
+				movement.setColumnValue(result.getResult()); // double rounded in MHRMovement.setColumnValue
+				if (result.getDescription() != null) {
+					movement.setDescription(result.getDescription());
+				}
 			}
 		}
+		movement.setHR_Payroll_ID(payrollProcess.getPayrollId());
+//		movement.setHR_PayrollConcept_ID(payrollConceptReference.getHR_PayrollConcept_ID());
+		movement.setPeriodNo(payrollProcess.getPeriodNo());
 		movement.setProcessed(true);
-		movements.put(payrollConcept.getId(), movement);
+		movements.put(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()), movement);
+		//	Save Movement
+		long startSavingMovementTime = System.currentTimeMillis();
+		if (payrollConcept.isManual()) {
+			logger.fine("Skip saving " + movement);
+		} else {
+			boolean saveThisRecord = (payrollConcept.isSaveInHistoric() 
+											|| movement.isPrinted() 
+											|| payrollConcept.isPaid() 
+											|| payrollConcept.isPrinted()) 
+									&& (!payrollConcept.isNotSaveInHistoryIfNull() || !movement.isEmpty());
+			if (saveThisRecord) {
+				movement.saveEx(transactionName);
+			}
+		}
+		logger.info("Saving Concept " + payrollConcept.getValue() + " - " + payrollConcept.getName() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startSavingMovementTime));
+		return movement;
 	}
 	
 	private RuleResult executeScriptEngine(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept concept, MRule rule, String transactionName) {
 		long startTime = System.currentTimeMillis();
 		RuleResult result = null;
+		RuleContext ruleContext = new ParallelContext(this, payrollProcess, employee, concept, transactionName);
 		try {
 			String text = "";
 			if (rule.getScript() != null) {
-				text = rule.getScript().trim().replaceAll("\\bget", "payrollEngine.get")
-						.replace(".payrollEngine.get", ".get");
+				text = rule.getScript().trim().replaceAll("\\bget", "ruleContext.getEngineHelper().get")
+						.replace(".ruleContext.getEngineHelper().get", ".get");
 			}
 			final String script =
 							" import org.eevolution.model.*;" 
@@ -200,7 +254,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 
 			ScriptEngine engine = rule.getScriptEngine();
 			final ScriptContext context = new SimpleScriptContext();
-			 getScriptParameters(payrollProcess, employee, concept).entrySet().stream().forEach(entry -> context.setAttribute(entry.getKey(), entry.getValue(), ScriptContext.ENGINE_SCOPE));
+			 getScriptParameters(payrollProcess, employee, concept, ruleContext).entrySet().stream().forEach(entry -> context.setAttribute(entry.getKey(), entry.getValue(), ScriptContext.ENGINE_SCOPE));
 		    context.setAttribute("description", "", ScriptContext.ENGINE_SCOPE);
 			//	Yamel Senih Add DefValue to another Types
 			Object defaultValue = 0.0;
@@ -234,6 +288,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		long startTime = System.currentTimeMillis();
 		MRule rule = MRule.get(getCtx(), ruleId);
 		RuleResult result = null;
+		RuleContext ruleContext = new ParallelContext(this, payrollProcess, employee, concept, transactionName);
 		try {
 			if (rule == null
 					|| rule.getAD_Rule_ID() <= 0) {
@@ -250,40 +305,15 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 				try {
 					RuleRunner runner = RuleRunnerFactory.getRuleRunnerInstance(rule);
 					if(runner != null) {
-						result = runner.run(new RuleContext() {
-							
-							@Override
-							public String getTransactionName() {
-								return transactionName;
-							}
-							
-							@Override
-							public EngineHelper getEngineHelper() {
-								return null;
-							}
-							
-							@Override
-							public PayrollProcess getCurrentProcess() {
-								return payrollProcess;
-							}
-							
-							@Override
-							public PayrollEmployee getCurrentEmployee() {
-								return employee;
-							}
-							
-							@Override
-							public PayrollConcept getCurrentConcept() {
-								return concept;
-							}
-						});
+						isRunned = true;
+						result = runner.run(ruleContext);
 					} else {
 						String className = RuleEngineUtil.getCompleteClassName(rule);
 						if(!Util.isEmpty(className)) {
 							RuleInterface ruleEngine = PayrollEngineHandler.getInstance().getRuleEngine(rule);
 							if(ruleEngine != null) {
 								isRunned = true;
-								Object engineResult = ruleEngine.run(getProcess(), getScriptParameters(payrollProcess, employee, concept));
+								Object engineResult = ruleEngine.run(getProcess(), getScriptParameters(payrollProcess, employee, concept, ruleContext));
 								Object description = ruleEngine.getDescription();
 								result = new DefaultRuleResult(engineResult, description);
 							}
@@ -303,8 +333,8 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 
 				String text = "";
 				if (rule.getScript() != null) {
-					text = rule.getScript().trim().replaceAll("\\bget", "payrollEngine.get")
-					.replace(".payrollEngine.get", ".get");
+					text = rule.getScript().trim().replaceAll("\\bget", "ruleContext.getEngineHelper().get")
+					.replace(".ruleContext.getEngineHelper().get", ".get");
 				}
 				String resultType = "double";
 				//	Yamel Senih Add DefValue to another Types
@@ -334,7 +364,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 								+ Env.NL + resultType + " result = "+ defValue +";"
 								+ Env.NL + "String description = null;"
 								+ Env.NL + text;
-				Scriptlet engine = new Scriptlet (Scriptlet.VARIABLE, script, getScriptParameters(payrollProcess, employee, concept));
+				Scriptlet engine = new Scriptlet (Scriptlet.VARIABLE, script, getScriptParameters(payrollProcess, employee, concept, ruleContext));
 				Exception ex = engine.execute();
 				if (ex != null) {
 					throw ex;
@@ -353,9 +383,10 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		return result;
 	}
 	
-	private HashMap<String, Object> getScriptParameters(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept concept) {
+	private HashMap<String, Object> getScriptParameters(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept concept, RuleContext ruleContext) {
 		/** the context for rules */
 		HashMap<String, Object> scriptCtx = new HashMap<String, Object>();
+		scriptCtx.put("ruleContext", ruleContext);
 		scriptCtx.put("payrollEngine", this);
 		scriptCtx.put("process", getProcess());
 		scriptCtx.put("_Process", payrollProcess.getId());
@@ -457,11 +488,11 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		return movement;
 	}
 	
-	private void createDummyMovement(PayrollConcept payrollConcept, String transactionName) {
+	private void createDummyMovement(PayrollEmployee employee, PayrollConcept payrollConcept, String transactionName) {
 		MHRMovement dummyMovement = new MHRMovement (getCtx(), 0, transactionName);
 		dummyMovement.setSeqNo(payrollConcept.getSequence());
 		dummyMovement.setIsManual(true); // to avoid landing on movement table
-		movements.put(payrollConcept.getId(), dummyMovement);
+		movements.put(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()), dummyMovement);
 		return;
 	}
 	
@@ -568,5 +599,10 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 												.setParameters(process.getHR_Payroll_ID())
 												.setOrderBy(MHRPayrollConcept.COLUMNNAME_SeqNo)
 												.getIDsAsList();
+	}
+
+	@Override
+	public void breakRunning(int scope, int persistence) {
+		//	TODO: Implement It
 	}
 }

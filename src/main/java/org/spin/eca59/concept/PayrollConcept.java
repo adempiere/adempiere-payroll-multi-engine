@@ -34,6 +34,9 @@ public class PayrollConcept {
 	private String columnType;
 	private String accountSign;
 	private boolean isManual;
+	private boolean isPaid;
+	private boolean isSaveInHistoric;
+	private boolean isNotSaveInHistoryIfNull;
 	private boolean isEmployee;
 	private boolean isInvoiced;
 	private boolean isPrinted;
@@ -53,6 +56,7 @@ public class PayrollConcept {
 		}
 		this.concept = concept;
 		id = concept.getHR_Concept_ID();
+		value = concept.getValue();
 		name = concept.getName();
 		description = concept.getDescription();
 		help = concept.getHelp();
@@ -63,6 +67,9 @@ public class PayrollConcept {
 		isEmployee = concept.isEmployee();
 		isInvoiced = concept.isInvoiced();
 		isPrinted = concept.isPrinted();
+		isPaid = concept.isPaid();
+		isSaveInHistoric = concept.isSaveInHistoric();
+		isNotSaveInHistoryIfNull = concept.isNotSaveInHistoryIfNull();
 		categoryId = concept.getHR_Concept_Category_ID();
 		typeId = concept.getHR_Concept_Type_ID();
 		sequence = concept.getSeqNo();
@@ -135,5 +142,22 @@ public class PayrollConcept {
 
 	public int getPrecision() {
 		return precision;
+	}
+
+	public boolean isPaid() {
+		return isPaid;
+	}
+
+	public boolean isSaveInHistoric() {
+		return isSaveInHistoric;
+	}
+
+	public boolean isNotSaveInHistoryIfNull() {
+		return isNotSaveInHistoryIfNull;
+	}
+
+	@Override
+	public String toString() {
+		return "PayrollConcept [id=" + id + ", value=" + value + ", name=" + name + "]";
 	}
 }

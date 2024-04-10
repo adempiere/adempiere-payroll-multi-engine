@@ -25,6 +25,7 @@ import org.compiere.model.MSysConfig;
 import org.compiere.util.CLogger;
 import org.compiere.util.Util;
 import org.eevolution.hr.model.MHRProcess;
+import org.spin.eca59.engine.parallel.ParallelEngine;
 
 /**
  * Get Class from payroll engine, used for handler
@@ -47,7 +48,7 @@ public class PayrollEngineFactory {
 	 * @return Class<?>
 	 */
 	private static Class<?> getHandlerClass(int clientId) {
-		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, OptimizedParallelProcessing.class.getName(), clientId);
+		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, ParallelEngine.class.getName(), clientId);
 		//	Validate null values
 		if(Util.isEmpty(className)) {
 			return null;
@@ -82,7 +83,7 @@ public class PayrollEngineFactory {
 		//	Not yet implemented
 		if (clazz == null) {
 			log.log(Level.INFO, "Using Default Payroll Implementation");
-			engine = new OptimizedParallelProcessing(process);
+			engine = new ParallelEngine(process);
 		} else {
 			Constructor<?> constructor = clazz.getDeclaredConstructor(new Class[] {MHRProcess.class});
 			engine = (PayrollEngine) constructor.newInstance(new Object[] {process});

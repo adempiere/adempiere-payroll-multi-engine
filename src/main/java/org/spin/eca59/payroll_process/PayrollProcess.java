@@ -18,9 +18,14 @@
 package org.spin.eca59.payroll_process;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
+import org.adempiere.core.domains.models.I_HR_Concept;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MPeriod;
+import org.compiere.model.Query;
 import org.eevolution.hr.model.MHRPayroll;
 import org.eevolution.hr.model.MHRPeriod;
 import org.eevolution.hr.model.MHRProcess;
@@ -48,6 +53,8 @@ public class PayrollProcess {
 	private int conversionTypeId;
 	private int organizationId;
 	private MHRProcess process;
+	private Properties context;
+	private List<Integer> concepts = new ArrayList<Integer>();
 	
 	public static PayrollProcess newInstance(MHRProcess sourceProcess) {
 		return new PayrollProcess(sourceProcess);
@@ -58,6 +65,7 @@ public class PayrollProcess {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}
 		this.process = process;
+		context = process.getCtx();
 		id = process.getHR_Process_ID();
 		documentNo = process.getDocumentNo();
 		currencyId = process.getC_Currency_ID();
@@ -90,11 +98,22 @@ public class PayrollProcess {
 			MHRPayroll payroll = MHRPayroll.getById(process.getCtx(), process.getHR_Payroll_ID(), null);
 			if(payroll != null) {
 				payrollValue = payroll.getValue();
+				concepts = getConceptsFromPayroll();
 			}
 		}
 		departmentId = process.getHR_Department_ID();
 		jobId = process.getHR_Job_ID();
 		businessPartnerId = process.getC_BPartner_ID();
+	}
+	
+	private List<Integer> getConceptsFromPayroll() {
+		return new Query(getContext(), I_HR_Concept.Table_Name, "EXISTS(SELECT 1 FROM HR_PayrollConcept c "
+				+ "WHERE c.HR_Payroll_ID = ? "
+				+ "AND c.HR_Concept_ID = HR_Concept.HR_Concept_ID "
+				+ "AND c.IsActive = 'Y')", null)
+				.setParameters(getPayrollId())
+				.setOnlyActiveRecords(true)
+				.getIDsAsList();
 	}
 	
 	public MHRProcess getProcess() {
@@ -167,5 +186,19 @@ public class PayrollProcess {
 
 	public int getClientId() {
 		return clientId;
+	}
+
+	public Properties getContext() {
+		return context;
+	}
+
+	public List<Integer> getConcepts() {
+		return concepts;
+	}
+
+	@Override
+	public String toString() {
+		return "PayrollProcess [id=" + id + ", payrollValue=" + payrollValue + ", documentNo=" + documentNo + ", name="
+				+ name + "]";
 	}
 }

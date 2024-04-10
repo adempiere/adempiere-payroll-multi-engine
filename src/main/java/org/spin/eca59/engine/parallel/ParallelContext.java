@@ -15,7 +15,7 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.rule;
+package org.spin.eca59.engine.parallel;
 
 import java.util.Properties;
 
@@ -24,52 +24,62 @@ import org.spin.eca59.employee.PayrollEmployee;
 import org.spin.eca59.engine.EngineHelper;
 import org.spin.eca59.engine.PayrollEngine;
 import org.spin.eca59.payroll_process.PayrollProcess;
+import org.spin.eca59.rule.RuleContext;
 
 /**
- * 	Contract for rule conext, use this to send data to runner
+ * 	A context for parallel processing
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public interface RuleContext {
+public class ParallelContext implements RuleContext {
+
+	public ParallelContext(PayrollEngine engine, PayrollProcess process, PayrollEmployee employee, PayrollConcept concept, String transactionName) {
+		this.engine = engine;
+		this.process = process;
+		this.employee = employee;
+		this.concept = concept;
+		this.transactionName = transactionName;
+		this.helper = new ParallelHelper(this);
+	}
 	
-	/**
-	 * Get Payroll Process Engine
-	 * @return
-	 */
-	public PayrollEngine getEngine();
+	private PayrollEngine engine;
+	private PayrollProcess process;
+	private PayrollEmployee employee;
+	private PayrollConcept concept;
+	private String transactionName;
+	private ParallelHelper helper;
 	
-	/**
-	 * Get Current Process Running
-	 * @return
-	 */
-	public PayrollProcess getCurrentProcess();
+	@Override
+	public PayrollEngine getEngine() {
+		return engine;
+	}
 	
-	/**
-	 * Get Current Employee
-	 * @return
-	 */
-	public PayrollEmployee getCurrentEmployee();
-	
-	/**
-	 * Get Current Concept
-	 * @return
-	 */
-	public PayrollConcept getCurrentConcept();
-	
-	/**
-	 * Get Current Engine Helper (This is a helper with current process, employee and concept)
-	 * @return
-	 */
-	public EngineHelper getEngineHelper();
-	
-	/**
-	 * Get context method
-	 * @return
-	 */
-	public Properties getContext();
-	
-	/**
-	 * Get transaction Name
-	 * @return
-	 */
-	public String getTransactionName();
+	@Override
+	public PayrollProcess getCurrentProcess() {
+		return process;
+	}
+
+	@Override
+	public PayrollEmployee getCurrentEmployee() {
+		return employee;
+	}
+
+	@Override
+	public PayrollConcept getCurrentConcept() {
+		return concept;
+	}
+
+	@Override
+	public EngineHelper getEngineHelper() {
+		return helper;
+	}
+
+	@Override
+	public String getTransactionName() {
+		return transactionName;
+	}
+
+	@Override
+	public Properties getContext() {
+		return process.getContext();
+	}
 }
