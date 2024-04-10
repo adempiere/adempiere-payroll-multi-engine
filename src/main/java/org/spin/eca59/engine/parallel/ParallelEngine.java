@@ -128,37 +128,6 @@ public class ParallelEngine implements PayrollEngine {
 		return true;
 	}
 	
-//	private void saveMovements() {
-//		long startTime = System.currentTimeMillis();
-//		movements.values()
-//		.parallelStream()
-//		.filter(movement -> movement.getHR_Concept_ID() != 0)
-//		.forEach(movement -> {
-//			long startSavingMovementTime = System.currentTimeMillis();
-//			MHRConcept concept = MHRConcept.getById(getCtx() , movement.getHR_Concept_ID(), null);
-//			if (concept != null && concept.get_ID() > 0) {
-//				if (concept.isManual()) {
-//					logger.fine("Skip saving " + movement);
-//				} else {
-//					boolean saveThisRecord = (concept.isSaveInHistoric() 
-//													|| movement.isPrinted() 
-//													|| concept.isPaid() 
-//													|| concept.isPrinted()) 
-//											&& (!concept.isNotSaveInHistoryIfNull() || !movement.isEmpty());
-//					if (saveThisRecord) {
-//						try {
-//							Trx.run(transactionName -> movement.saveEx(transactionName));
-//						} catch (Exception e) {
-//							System.err.println("Error");
-//						}
-//					}
-//				}
-//			}
-//			logger.info("Saving Concept " + concept.getValue() + " - " + concept.getName() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startSavingMovementTime));
-//		});
-//		logger.info("Saving elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
-//	}
-	
 	public Properties getCtx() {
 		return getProcess().getCtx();
 	}
