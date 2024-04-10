@@ -171,17 +171,15 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 		movements.put(payrollConcept.getId(), movement);
 	}
 	
-	private RuleResult executeScriptEngine(PayrollConcept concept, MRule rule, String transactionName) {
+	private RuleResult executeScriptEngine(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept concept, MRule rule, String transactionName) {
 		long startTime = System.currentTimeMillis();
 		RuleResult result = null;
 		try {
 			String text = "";
 			if (rule.getScript() != null) {
-				text = rule.getScript().trim().replaceAll("\\bget", "process.get")
-						.replace(".process.get", ".get");
+				text = rule.getScript().trim().replaceAll("\\bget", "payrollEngine.get")
+						.replace(".payrollEngine.get", ".get");
 			}
-			/** the context for rules */
-			HashMap<String, Object> scriptCtx = new HashMap<String, Object>();
 			final String script =
 							" import org.eevolution.model.*;" 
 							+ Env.NL + "import org.eevolution.hr.model.*;"
@@ -201,7 +199,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 
 			ScriptEngine engine = rule.getScriptEngine();
 			final ScriptContext context = new SimpleScriptContext();
-			scriptCtx.entrySet().stream().forEach(entry -> context.setAttribute(entry.getKey(), entry.getValue(), ScriptContext.ENGINE_SCOPE));
+			 getScriptParameters(payrollProcess, employee, concept).entrySet().stream().forEach(entry -> context.setAttribute(entry.getKey(), entry.getValue(), ScriptContext.ENGINE_SCOPE));
 		    context.setAttribute("description", "", ScriptContext.ENGINE_SCOPE);
 			//	Yamel Senih Add DefValue to another Types
 			Object defaultValue = 0.0;
@@ -251,7 +249,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 				try {
 					RuleRunner runner = RuleRunnerFactory.getRuleRunnerInstance(rule);
 					if(runner != null) {
-						result = runner.run(payrollProcess, employee, concept, transactionName);
+						result = runner.run(this, payrollProcess, employee, concept, transactionName);
 					} else {
 						String className = RuleEngineUtil.getCompleteClassName(rule);
 						if(!Util.isEmpty(className)) {
@@ -274,12 +272,12 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 			//	if the class is not loaded then run from rule
 			if(!isRunned) {
 				if (rule.getEngineName() != null)
-					return  executeScriptEngine(concept, rule, transactionName);
+					return  executeScriptEngine(payrollProcess, employee, concept, rule, transactionName);
 
 				String text = "";
 				if (rule.getScript() != null) {
-					text = rule.getScript().trim().replaceAll("\\bget", "process.get")
-					.replace(".process.get", ".get");
+					text = rule.getScript().trim().replaceAll("\\bget", "payrollEngine.get")
+					.replace(".payrollEngine.get", ".get");
 				}
 				String resultType = "double";
 				//	Yamel Senih Add DefValue to another Types
@@ -331,6 +329,7 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 	private HashMap<String, Object> getScriptParameters(PayrollProcess payrollProcess, PayrollEmployee employee, PayrollConcept concept) {
 		/** the context for rules */
 		HashMap<String, Object> scriptCtx = new HashMap<String, Object>();
+		scriptCtx.put("payrollEngine", this);
 		scriptCtx.put("process", getProcess());
 		scriptCtx.put("_Process", payrollProcess.getId());
 		scriptCtx.put("_Period", payrollProcess.getPeriodId());

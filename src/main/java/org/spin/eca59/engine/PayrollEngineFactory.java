@@ -47,7 +47,7 @@ public class PayrollEngineFactory {
 	 * @return Class<?>
 	 */
 	private static Class<?> getHandlerClass(int clientId) {
-		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, DefaultPayrollEngine.class.getName(), clientId);
+		String className = MSysConfig.getValue(ECA59_PAYROLL_ENGINE, OptimizedParallelProcessing.class.getName(), clientId);
 		//	Validate null values
 		if(Util.isEmpty(className)) {
 			return null;
@@ -82,7 +82,7 @@ public class PayrollEngineFactory {
 		//	Not yet implemented
 		if (clazz == null) {
 			log.log(Level.INFO, "Using Default Payroll Implementation");
-			engine = new DefaultPayrollEngine(process);
+			engine = new OptimizedParallelProcessing(process);
 		} else {
 			Constructor<?> constructor = clazz.getDeclaredConstructor(new Class[] {MHRProcess.class});
 			engine = (PayrollEngine) constructor.newInstance(new Object[] {process});
