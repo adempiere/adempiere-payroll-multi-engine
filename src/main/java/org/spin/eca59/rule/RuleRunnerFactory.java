@@ -15,7 +15,7 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.concept;
+package org.spin.eca59.rule;
 
 import java.lang.reflect.Constructor;
 

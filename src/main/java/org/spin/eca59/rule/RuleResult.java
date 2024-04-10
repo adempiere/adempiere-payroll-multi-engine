@@ -15,16 +15,23 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.concept;
-
-import org.spin.eca59.employee.PayrollEmployee;
-import org.spin.eca59.engine.PayrollEngine;
-import org.spin.eca59.payroll_process.PayrollProcess;
+package org.spin.eca59.rule;
 
 /**
- * 	Contract for rule engine
+ * 	Contract for rule engine result
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public interface RuleRunner {
-	public RuleResult run(PayrollEngine payrollEngine, PayrollProcess process, PayrollEmployee employee, PayrollConcept concept, String transactionName);
+public interface RuleResult {
+	
+	/**
+	 * Get description from rule
+	 * @return
+	 */
+	public String getDescription();
+	
+	/**
+	 * Get result from execution
+	 * @return
+	 */
+	public Object getResult();
 }

@@ -56,13 +56,14 @@ import org.eevolution.hr.model.MHRPayrollConcept;
 import org.eevolution.hr.model.MHRPeriod;
 import org.eevolution.hr.model.MHRProcess;
 import org.eevolution.hr.services.HRProcessActionMsg;
-import org.spin.eca59.concept.DefaultRuleResult;
 import org.spin.eca59.concept.PayrollConcept;
-import org.spin.eca59.concept.RuleResult;
-import org.spin.eca59.concept.RuleRunner;
-import org.spin.eca59.concept.RuleRunnerFactory;
 import org.spin.eca59.employee.PayrollEmployee;
 import org.spin.eca59.payroll_process.PayrollProcess;
+import org.spin.eca59.rule.DefaultRuleResult;
+import org.spin.eca59.rule.RuleContext;
+import org.spin.eca59.rule.RuleResult;
+import org.spin.eca59.rule.RuleRunner;
+import org.spin.eca59.rule.RuleRunnerFactory;
 import org.spin.hr.util.PayrollEngineHandler;
 import org.spin.hr.util.RuleInterface;
 import org.spin.util.RuleEngineUtil;
@@ -249,7 +250,33 @@ public class OptimizedParallelProcessing implements PayrollEngine {
 				try {
 					RuleRunner runner = RuleRunnerFactory.getRuleRunnerInstance(rule);
 					if(runner != null) {
-						result = runner.run(this, payrollProcess, employee, concept, transactionName);
+						result = runner.run(new RuleContext() {
+							
+							@Override
+							public String getTransactionName() {
+								return transactionName;
+							}
+							
+							@Override
+							public EngineHelper getEngineHelper() {
+								return null;
+							}
+							
+							@Override
+							public PayrollProcess getCurrentProcess() {
+								return payrollProcess;
+							}
+							
+							@Override
+							public PayrollEmployee getCurrentEmployee() {
+								return employee;
+							}
+							
+							@Override
+							public PayrollConcept getCurrentConcept() {
+								return concept;
+							}
+						});
 					} else {
 						String className = RuleEngineUtil.getCompleteClassName(rule);
 						if(!Util.isEmpty(className)) {

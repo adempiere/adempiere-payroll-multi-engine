@@ -15,23 +15,12 @@
  * All Rights Reserved.                                                       *
  * Contributor(s): Yamel Senih www.erpya.com                                  *
  *****************************************************************************/
-package org.spin.eca59.concept;
+package org.spin.eca59.engine;
 
 /**
- * 	Contract for rule engine result
+ * 	Contract for rule context, use this to add helper methods
  *	@author Yamel Senih, ysenih@erpya.com, ERPCyA http://www.erpya.com
  */
-public interface RuleResult {
+public interface EngineHelper {
 	
-	/**
-	 * Get description from rule
-	 * @return
-	 */
-	public String getDescription();
-	
-	/**
-	 * Get result from execution
-	 * @return
-	 */
-	public Object getResult();
 }
