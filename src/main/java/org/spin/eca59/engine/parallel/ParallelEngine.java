@@ -34,6 +34,7 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.SimpleScriptContext;
 
+import org.adempiere.core.domains.models.I_HR_Movement;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MConversionRate;
@@ -108,6 +109,7 @@ public class ParallelEngine implements PayrollEngine {
 		long startTime = System.currentTimeMillis();
 		List<Integer> payrollConcepts = getPayrollConceptIds();
 		List<Integer> employees = getEmployeeIds();
+		loadMovements();
 		PayrollProcess payrollProcess = PayrollProcess.newInstance(getProcess());
 		employees.parallelStream().forEach(businessPartnerId -> {
 			MBPartner businessPartner = new MBPartner(getCtx(), businessPartnerId, null);
@@ -126,6 +128,30 @@ public class ParallelEngine implements PayrollEngine {
 		});
 		logger.info("Calculation for createParallelMovements # Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
 		return true;
+	}
+	
+	/**
+	 * Load HR_Movements and store them in a HR_Concept_ID->MHRMovement table
+	 * @param partnerId
+	 */
+	private void loadMovements() {
+		List<Integer> movementsList = new Query(getCtx(), I_HR_Movement.Table_Name, I_HR_Movement.COLUMNNAME_HR_Process_ID + " = ?", null)
+				.setParameters(getProcess().getHR_Process_ID())
+				.getIDsAsList();
+		movementsList.parallelStream().forEach(movementId -> {
+			MHRMovement movement = new MHRMovement(getCtx(), movementId, null);
+			if(movements.containsKey(getMovementKey(movement.getC_BPartner_ID(), movement.getHR_Concept_ID()))) {
+				MHRMovement lastM = movements.get(getMovementKey(movement.getC_BPartner_ID(), movement.getHR_Concept_ID()));
+				MHRConcept concept = MHRConcept.getById(getCtx(), lastM.getHR_Concept_ID(), null);
+				String columntype = concept.getColumnType();
+				if (columntype.equals(MHRConcept.COLUMNTYPE_Amount)) {
+					movement.addAmount(lastM.getAmount());
+				} else if (columntype.equals(MHRConcept.COLUMNTYPE_Quantity)) {
+					movement.addQty(lastM.getQty());
+				}
+			}
+			movements.put(getMovementKey(movement.getC_BPartner_ID(), movement.getHR_Concept_ID()), movement);
+		});
 	}
 	
 	public Properties getCtx() {
