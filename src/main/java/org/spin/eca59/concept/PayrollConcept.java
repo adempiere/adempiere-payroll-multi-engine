@@ -19,6 +19,7 @@ package org.spin.eca59.concept;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.eevolution.hr.model.MHRConcept;
+import org.eevolution.hr.model.MHRPayrollConcept;
 
 /**
  * 	Concept Definition
@@ -44,16 +45,34 @@ public class PayrollConcept {
 	private int typeId;
 	private int sequence;
 	private int precision;
+	private int payrollconceptId;
 	private MHRConcept concept;
+
+	public static PayrollConcept newInstance(MHRPayrollConcept sourceConcept) {
+		return new PayrollConcept(sourceConcept);
+	}
 	
 	public static PayrollConcept newInstance(MHRConcept sourceConcept) {
 		return new PayrollConcept(sourceConcept);
 	}
 	
-	private PayrollConcept(MHRConcept concept) {
-		if(concept == null) {
+	private PayrollConcept(MHRPayrollConcept payrollConcept) {
+		if(payrollConcept == null) {
 			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
 		}
+		MHRConcept concept = MHRConcept.getById(payrollConcept.getCtx(), payrollConcept.getHR_Concept_ID(), null);
+		fill(concept);
+		payrollconceptId = payrollConcept.getHR_PayrollConcept_ID();
+	}
+
+	private PayrollConcept(MHRConcept payrollConcept) {
+		if(payrollConcept == null) {
+			throw new AdempiereException("@HR_Concept_ID@ @IsMandatory@");
+		}
+		fill(payrollConcept);
+	}
+	
+	private void fill(MHRConcept concept) {
 		this.concept = concept;
 		id = concept.getHR_Concept_ID();
 		value = concept.getValue();
@@ -154,6 +173,10 @@ public class PayrollConcept {
 
 	public boolean isNotSaveInHistoryIfNull() {
 		return isNotSaveInHistoryIfNull;
+	}
+
+	public int getPayrollconceptId() {
+		return payrollconceptId;
 	}
 
 	@Override

@@ -72,4 +72,22 @@ public interface RuleContext {
 	 * @return
 	 */
 	public String getTransactionName();
+	
+	/**
+	 * Break Running for employee
+	 * @param businessPartnerId
+	 */
+	public void breakEmployeeRunning();
+	
+	/**
+	 * Breack Running for concept
+	 * @param businessPartnerId
+	 * @param conceptId
+	 */
+	public void breakConceptRunning();
+	
+	/**
+	 * Breack Running for process
+	 */
+	public void breakProcessRunning();
 }

@@ -83,6 +83,10 @@ public class ParallelEngine implements PayrollEngine {
 	public Map<String, MHRMovement> movements = Collections.synchronizedMap(new HashMap<String, MHRMovement>());
 	/* stack of concepts executing rules - to check loop in recursion */
 	private Map<String, Boolean> activeConceptRule = Collections.synchronizedMap(new HashMap<String, Boolean>());
+	/**	Used for break employee running	*/
+	public Map<Integer, Boolean> breakEmployee = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+	/**	Used for break concept running	*/
+	public Map<String, Boolean> breakConcept = Collections.synchronizedMap(new HashMap<String, Boolean>());
 	private MHRProcess process;
 	
 	@Override
@@ -117,12 +121,16 @@ public class ParallelEngine implements PayrollEngine {
 			long employeeStartTime = System.currentTimeMillis();
 			PayrollEmployee payrollEmployee = PayrollEmployee.newInstance(MHREmployee.getActiveEmployee(getProcess().getCtx(), businessPartnerId, null));
 			Trx.run(transactionName -> {
-				payrollConcepts.forEach(payrollConceptId -> {
+				for(int payrollConceptId : payrollConcepts) {
 					MHRPayrollConcept payrollConceptReference = new MHRPayrollConcept(getCtx(), payrollConceptId, null);
-					MHRConcept concept = MHRConcept.getById(getCtx(), payrollConceptReference.getHR_Concept_ID(), null);
-					PayrollConcept payrollConcept = PayrollConcept.newInstance(concept);
+					PayrollConcept payrollConcept = PayrollConcept.newInstance(payrollConceptReference);
 					createMovementFromConcept(payrollProcess, payrollEmployee, payrollConcept, transactionName);
-				});
+					if(breakEmployee.containsKey(payrollEmployee.getBusinessPartnerId())) {
+						breakEmployee.remove(payrollEmployee.getBusinessPartnerId());
+						logger.info("Skip Employee # " + businessPartner.getValue() + " - " + businessPartner.getName() +  " " + businessPartner.getName2() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - employeeStartTime));
+						break;
+					}
+				}
 			});
 			logger.info("Employee # " + businessPartner.getValue() + " - " + businessPartner.getName() +  " " + businessPartner.getName2() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - employeeStartTime));
 		});
@@ -173,7 +181,7 @@ public class ParallelEngine implements PayrollEngine {
 			return movement;
 		}
 		logger.info("Calculating -> Concept "+ payrollConcept.getValue() + " -> " + payrollConcept.getName());
-		//	TODO: Implement it
+		long startTime = System.currentTimeMillis();
 		MHRAttribute attribute = MHRAttribute.getByConceptAndEmployee(payrollConcept.getConcept() , employee.getEmployee(), payrollProcess.getPayrollId(), payrollProcess.getValidFrom(), payrollProcess.getValidTo());
 		if (attribute == null || payrollConcept.isManual()) {
 			createDummyMovement(employee, payrollConcept, transactionName);
@@ -201,7 +209,14 @@ public class ParallelEngine implements PayrollEngine {
 //		movement.setHR_PayrollConcept_ID(payrollConceptReference.getHR_PayrollConcept_ID());
 		movement.setPeriodNo(payrollProcess.getPeriodNo());
 		movement.setProcessed(true);
+		//	Break it
+		if(breakConcept.containsKey(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()))) {
+			breakConcept.remove(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()));
+			logger.info("Skip Concept because is break from rule " + payrollConcept.getValue() + " - " + payrollConcept.getName() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
+			return null;
+		}
 		movements.put(getMovementKey(employee.getBusinessPartnerId(), payrollConcept.getId()), movement);
+		logger.info("Concept runned from rule " + payrollConcept.getValue() + " - " + payrollConcept.getName() + " Time elapsed: " + TimeUtil.formatElapsed(System.currentTimeMillis() - startTime));
 		//	Save Movement
 		long startSavingMovementTime = System.currentTimeMillis();
 		if (payrollConcept.isManual()) {
@@ -597,7 +612,17 @@ public class ParallelEngine implements PayrollEngine {
 	}
 
 	@Override
-	public void breakRunning(int scope, int persistence) {
-		//	TODO: Implement It
+	public void breakEmployeeRunning(int businessPartnerId) {
+		breakEmployee.put(businessPartnerId, true);
+	}
+
+	@Override
+	public void breakConceptRunning(int businessPartnerId, int conceptId) {
+		breakConcept.put(getMovementKey(businessPartnerId, conceptId), true);
+	}
+
+	@Override
+	public void breakProcessRunning() {
+		//	TODO: allows break process
 	}
 }

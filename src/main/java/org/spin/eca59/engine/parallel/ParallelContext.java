@@ -82,4 +82,19 @@ public class ParallelContext implements RuleContext {
 	public Properties getContext() {
 		return process.getContext();
 	}
+
+	@Override
+	public void breakEmployeeRunning() {
+		getEngine().breakEmployeeRunning(getCurrentEmployee().getBusinessPartnerId());
+	}
+
+	@Override
+	public void breakConceptRunning() {
+		getEngine().breakConceptRunning(getCurrentEmployee().getBusinessPartnerId(), getCurrentConcept().getId());
+	}
+
+	@Override
+	public void breakProcessRunning() {
+		getEngine().breakProcessRunning();
+	}
 }
